@@ -37,7 +37,7 @@
     "axios": "^1.6.8",
     "get-urls": "^12.1.0",
     "is-base64": "^1.1.0",
-    "puppeteer": "^23.4.1",
+    "puppeteer": "^22.6.5",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
