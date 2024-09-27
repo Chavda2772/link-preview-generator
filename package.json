@@ -34,12 +34,12 @@
   },
   "homepage": "https://github.com/AndrejGajdos/link-preview-generator#readme",
   "dependencies": {
-    "get-urls": "^10.0.0",
+    "axios": "^1.6.8",
+    "get-urls": "^12.1.0",
     "is-base64": "^1.1.0",
-    "puppeteer": "^8.0.0",
-    "puppeteer-extra": "^3.1.18",
-    "puppeteer-extra-plugin-stealth": "^2.7.6",
-    "request": "^2.88.2"
+    "puppeteer": "^23.4.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "types": "./index.d.ts"
 }

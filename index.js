@@ -1,20 +1,43 @@
 "use strict";
 const puppeteer = require("puppeteer-extra");
 const pluginStealth = require("puppeteer-extra-plugin-stealth");
-const util = require("util");
-const request = util.promisify(require("request"));
-const getUrls = require("get-urls");
-const isBase64 = require("is-base64");
+const axios = require("axios");
 
-const urlImageIsAccessible = async (url) => {
-  const correctedUrls = getUrls(url);
-  if (isBase64(url, { allowMime: true })) {
-    return true;
-  }
+
+const getUrls = async () => {
+  const getUrlsModule = await import("get-urls");
+  return getUrlsModule.default;
+};
+
+const urlImageIsAccessible = async url => {
+  const getUrlsInstance = await getUrls();
+  const correctedUrls = await getUrlsInstance(url);
   if (correctedUrls.size !== 0) {
-    const urlResponse = await request(correctedUrls.values().next().value);
+    const urlResponse = await axios.head(correctedUrls.values().next().value).catch(e => {
+      return null;
+    });
+    if (!urlResponse) return null;
     const contentType = urlResponse.headers["content-type"];
     return new RegExp("image/*").test(contentType);
+  }
+};
+
+const fetchUrl = async (url) => {
+  try {
+    const response = await axios.get(url);
+    return {
+      status: response.status,
+      data: response.data,
+      headers: response.headers
+    };
+  } catch (error) {
+    // Handle errors if needed
+    console.error("Error fetching URL:", error);
+    return {
+      status: error.response ? error.response.status : 500,
+      data: null,
+      headers: {}
+    };
   }
 };
 
@@ -195,7 +218,7 @@ const getFavicon = async (page, uri) => {
     }
 
     const appleTouchIcons = document.querySelectorAll('link[rel="apple-touch-icon"],link[rel="apple-touch-icon-precomposed"]');
-    for (let i = 0; i < appleTouchIcons.length; i ++) {
+    for (let i = 0; i < appleTouchIcons.length; i++) {
       if (
         appleTouchIcons[i] &&
         appleTouchIcons[i].href.length > 0 &&
@@ -211,6 +234,21 @@ const getFavicon = async (page, uri) => {
   return favicon;
 }
 
+const requestInterception = (req) => {
+  switch (req.resourceType()) {
+    case "stylesheet":
+    case "font":
+    case "beacon":
+    case "media":
+    case "main_frame":
+    case "websocket":
+    case "sub_frame":
+      req.abort();
+      break;
+    default:
+      req.continue();
+  }
+}
 
 module.exports = async (
   uri,
@@ -224,6 +262,7 @@ module.exports = async (
     headless: true,
     args: [...puppeteerArgs],
   };
+
   if (executablePath) {
     params["executablePath"] = executablePath;
   }
@@ -232,8 +271,11 @@ module.exports = async (
   const page = await browser.newPage();
   page.setUserAgent(puppeteerAgent);
 
+  await page.setRequestInterception(true);
+  page.on("request", requestInterception);
+
   await page.goto(uri);
-  await page.exposeFunction("request", request);
+  await page.exposeFunction("fetchUrl", fetchUrl);
   await page.exposeFunction("urlImageIsAccessible", urlImageIsAccessible);
 
   const obj = {};
